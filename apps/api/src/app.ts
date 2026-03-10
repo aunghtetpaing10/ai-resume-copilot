@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import healthRoutes from './routes/health';
+import authPlugin from './plugins/auth';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = fastify({
@@ -57,9 +58,17 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
+  // Auth plugin
+  await app.register(authPlugin);
+
   // Routes
   app.register(async (api) => {
     api.register(healthRoutes, { prefix: '/health' });
+
+    // Protected auth testing route
+    api.get('/auth/me', { preValidation: [app.authenticate] }, async (request, reply) => {
+      return { success: true, user: request.user, profile: request.profile };
+    });
   }, { prefix: '/api/v1' });
 
   // Add a hook to log requests
