@@ -1,0 +1,10 @@
+{
+  "name": "@ai-resume-copilot/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript types across all apps",
+  "main": "./src/index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  }
+}
