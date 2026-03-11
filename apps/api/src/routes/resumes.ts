@@ -1,5 +1,5 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { supabase } from '../lib/supabase';
+import { FastifyInstance, FastifyRequest } from 'fastify';
+import { supabase, createAuthClient } from '../lib/supabase';
 import { ResumeParserService } from '../services/resume-parser';
 import { CreateResumeRequest, UpdateResumeRequest, ResumeContent } from '@ai-resume-copilot/shared-types';
 
@@ -14,7 +14,11 @@ export default async function (fastify: FastifyInstance) {
     const userId = request.user?.id;
     if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
-    const { data, error } = await supabase
+    // Extract token from Authorization header or cookie (depending on your setup, assuming Bearer token here)
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    const authClient = token ? createAuthClient(token) : supabase;
+
+    const { data, error } = await authClient
       .from('resumes')
       .select('*')
       .eq('user_id', userId)
@@ -35,7 +39,10 @@ export default async function (fastify: FastifyInstance) {
     const userId = request.user?.id;
     if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
-    const { data, error } = await supabase
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    const authClient = token ? createAuthClient(token) : supabase;
+
+    const { data, error } = await authClient
       .from('resumes')
       .select('*')
       .eq('id', request.params.id)
@@ -56,6 +63,9 @@ export default async function (fastify: FastifyInstance) {
     const userId = request.user?.id;
     if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    const authClient = token ? createAuthClient(token) : supabase;
+
     const defaultContent: ResumeContent = {
       personalInfo: { name: '', email: '' },
       experience: [],
@@ -70,7 +80,7 @@ export default async function (fastify: FastifyInstance) {
       is_base: true
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await authClient
       .from('resumes')
       .insert(newResume)
       .select()
@@ -91,11 +101,14 @@ export default async function (fastify: FastifyInstance) {
     const userId = request.user?.id;
     if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    const authClient = token ? createAuthClient(token) : supabase;
+
     const updates: any = { updated_at: new Date().toISOString() };
     if (request.body.title) updates.title = request.body.title;
     if (request.body.content) updates.content = request.body.content;
 
-    const { data, error } = await supabase
+    const { data, error } = await authClient
       .from('resumes')
       .update(updates)
       .eq('id', request.params.id)
@@ -120,8 +133,11 @@ export default async function (fastify: FastifyInstance) {
     const userId = request.user?.id;
     if (!userId) return reply.code(401).send({ error: 'Unauthorized' });
 
+    const token = request.headers.authorization?.replace('Bearer ', '');
+    const authClient = token ? createAuthClient(token) : supabase;
+
     // 1. Get the resume to check if there is an associated source file
-    const { data: resume } = await supabase
+    const { data: resume } = await authClient
       .from('resumes')
       .select('source_file_path')
       .eq('id', request.params.id)
@@ -131,7 +147,7 @@ export default async function (fastify: FastifyInstance) {
     if (!resume) return reply.code(404).send({ error: 'Resume not found' });
 
     // 2. Delete the record in the db
-    const { error: dbError } = await supabase
+    const { error: dbError } = await authClient
       .from('resumes')
       .delete()
       .eq('id', request.params.id)
@@ -144,7 +160,7 @@ export default async function (fastify: FastifyInstance) {
 
     // 3. Clean up the storage bucket if file exists
     if (resume.source_file_path) {
-      const { error: storageError } = await supabase
+      const { error: storageError } = await authClient
         .storage
         .from('resumes')
         .remove([resume.source_file_path]);
@@ -172,16 +188,19 @@ export default async function (fastify: FastifyInstance) {
     }
 
     try {
+      // Extract token to authenticate client correctly for Storage uploads
+      const token = request.headers.authorization?.replace('Bearer ', '');
+      const authClient = token ? createAuthClient(token) : supabase;
+
       // Read the file buffer
       const buffer = await data.toBuffer();
       
       // Build unique file path inside the 'resumes' bucket
-      const fileExt = data.filename.split('.').pop();
       const timestamp = new Date().getTime();
       const filePath = `${userId}/${timestamp}_${data.filename.replace(/[^a-zA-Z0-9_.-]/g, '')}`;
 
       // Upload to Supabase Storage
-      const { error: uploadError } = await supabase
+      const { error: uploadError } = await authClient
         .storage
         .from('resumes')
         .upload(filePath, buffer, {
@@ -214,7 +233,7 @@ export default async function (fastify: FastifyInstance) {
         is_base: true
       };
 
-      const { data: dbData, error: dbError } = await supabase
+      const { data: dbData, error: dbError } = await authClient
         .from('resumes')
         .insert(newResume)
         .select()
@@ -223,7 +242,7 @@ export default async function (fastify: FastifyInstance) {
       if (dbError) {
         request.log.error(dbError);
         // Best effort: cleanup storage if DB insertion failed
-        await supabase.storage.from('resumes').remove([filePath]);
+        await authClient.storage.from('resumes').remove([filePath]);
         return reply.code(500).send({ error: 'Failed to save resume record' });
       }
 

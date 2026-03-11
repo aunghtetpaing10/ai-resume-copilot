@@ -47,7 +47,7 @@ export default function ResumeEditor() {
       let parsedContent: ResumeContent;
       try {
         parsedContent = JSON.parse(jsonContent);
-      } catch (e) {
+      } catch (_e) {
         throw new Error('Invalid JSON format in the content area.');
       }
 

@@ -54,10 +54,12 @@ export const api = {
     },
 
     async delete(id: string): Promise<void> {
-      const headers = await getAuthHeaders();
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${API_BASE}/resumes/${id}`, {
         method: 'DELETE',
-        headers
+        headers: {
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        }
       });
       if (!res.ok) throw new Error('Failed to delete resume');
     },

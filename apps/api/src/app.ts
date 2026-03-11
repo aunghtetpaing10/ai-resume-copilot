@@ -75,13 +75,13 @@ export async function buildApp(): Promise<FastifyInstance> {
     api.register(resumesRoutes, { prefix: '/resumes' });
 
     // Protected auth testing route
-    api.get('/auth/me', { preValidation: [app.authenticate] }, async (request, reply) => {
+    api.get('/auth/me', { preValidation: [app.authenticate] }, async (request, _reply) => {
       return { success: true, user: request.user, profile: request.profile };
     });
   }, { prefix: '/api/v1' });
 
   // Add a hook to log requests
-  app.addHook('onRequest', (request, reply, done) => {
+  app.addHook('onRequest', (request, _reply, done) => {
     request.log.info({ req: request.headers['x-request-id'] }, 'incoming request');
     done();
   });

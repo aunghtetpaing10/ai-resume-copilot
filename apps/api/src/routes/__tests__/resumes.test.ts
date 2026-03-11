@@ -3,6 +3,11 @@ import { buildApp } from '../../app';
 import { FastifyInstance } from 'fastify';
 import { supabase } from '../../lib/supabase';
 
+const mockAuthClient = {
+  from: jest.fn(),
+  storage: { from: jest.fn() }
+};
+
 // Mock Supabase to avoid hitting real database in tests
 jest.mock('../../lib/supabase', () => ({
   supabase: {
@@ -14,7 +19,7 @@ jest.mock('../../lib/supabase', () => ({
       getUser: jest.fn(),
     }
   },
-  createAuthClient: jest.fn(),
+  createAuthClient: jest.fn(() => mockAuthClient)
 }));
 
 describe('Resumes API', () => {
@@ -38,14 +43,13 @@ describe('Resumes API', () => {
       data: { user: { id: 'test-user-id' } },
       error: null,
     });
-    const selectMock = jest.fn().mockReturnThis();
-    const eqMock = jest.fn().mockReturnThis();
-    const singleMock = jest.fn().mockResolvedValue({ data: { id: 'test-user-id', tier: 'free' }, error: null });
-    const createAuthClientMock = jest.fn().mockReturnValue({
-      from: jest.fn().mockReturnValue({ select: selectMock, eq: eqMock, single: singleMock })
+    
+    // Default fallback mock config for the auth.ts middleware
+    mockAuthClient.from.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { id: 'test-user-id', tier: 'free' }, error: null })
     });
-    const { createAuthClient } = require('../../lib/supabase');
-    (createAuthClient as jest.Mock).mockImplementation(createAuthClientMock);
   });
 
   it('GET /api/v1/resumes - should return user resumes', async () => {
@@ -54,10 +58,13 @@ describe('Resumes API', () => {
     const eqMock = jest.fn().mockReturnThis();
     const orderMock = jest.fn().mockResolvedValue({ data: mockResumes, error: null });
 
-    (supabase.from as jest.Mock).mockReturnValue({
-      select: selectMock,
-      eq: eqMock,
-      order: orderMock,
+    // Since the auth middleware makes a `.single()` call to query profiles and the route
+    // makes a `.order()` call to query resumes, we mock the `from` to handle both.
+    mockAuthClient.from.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({ data: { id: 'test-user-id' }, error: null }) };
+      }
+      return { select: selectMock, eq: eqMock, order: orderMock };
     });
 
     const response = await request(app.server)
@@ -66,7 +73,7 @@ describe('Resumes API', () => {
       .expect(200);
 
     expect(response.body.resumes).toEqual(mockResumes);
-    expect(supabase.from).toHaveBeenCalledWith('resumes');
+    expect(mockAuthClient.from).toHaveBeenCalledWith('resumes');
     expect(eqMock).toHaveBeenCalledWith('user_id', 'test-user-id');
   });
 
@@ -76,10 +83,11 @@ describe('Resumes API', () => {
     const selectMock = jest.fn().mockReturnThis();
     const singleMock = jest.fn().mockResolvedValue({ data: newResume, error: null });
 
-    (supabase.from as jest.Mock).mockReturnValue({
-      insert: insertMock,
-      select: selectMock,
-      single: singleMock,
+    mockAuthClient.from.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({ data: { id: 'test-user-id' }, error: null }) };
+      }
+      return { insert: insertMock, select: selectMock, single: singleMock };
     });
 
     const response = await request(app.server)
@@ -101,7 +109,12 @@ describe('Resumes API', () => {
       single: jest.fn().mockResolvedValue({ data: updatedResume, error: null })
     };
 
-    (supabase.from as jest.Mock).mockReturnValue(chainMock);
+    mockAuthClient.from.mockImplementation((table: string) => {
+       if (table === 'profiles') {
+        return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({ data: { id: 'test-user-id' }, error: null }) };
+      }
+      return chainMock;
+    });
 
     const response = await request(app.server)
       .patch('/api/v1/resumes/1')
@@ -109,7 +122,6 @@ describe('Resumes API', () => {
       .send({ title: 'Updated Title' })
       .expect(200);
 
-    // Simplified mock evaluation for brevity, just assuming success path
     expect(response.body.resume.title).toBe('Updated Title');
   });
 
@@ -123,23 +135,24 @@ describe('Resumes API', () => {
       single: jest.fn().mockResolvedValue({ data: mockResumeData, error: null })
     };
 
-    // Override the last eq/delete to return the resolved value avoiding infinite chaining
     chainMock.eq.mockImplementation(() => chainMock);
     chainMock.delete.mockImplementation(() => chainMock);
 
-    (supabase.from as jest.Mock).mockReturnValue(chainMock);
-
     const removeStorageMock = jest.fn().mockResolvedValue({ error: null });
-    (supabase.storage.from as jest.Mock).mockReturnValue({
-      remove: removeStorageMock
+
+    mockAuthClient.from.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(), single: jest.fn().mockResolvedValue({ data: { id: 'test-user-id' }, error: null }) };
+      }
+      return chainMock;
     });
+    mockAuthClient.storage.from.mockReturnValue({ remove: removeStorageMock });
 
     await request(app.server)
       .delete('/api/v1/resumes/1')
       .set('Authorization', 'Bearer dummy-token')
       .expect(204);
 
-    expect(supabase.from).toHaveBeenCalledWith('resumes');
-    // Storage removal checks shouldn't fail even if mocked naively
+    expect(mockAuthClient.from).toHaveBeenCalledWith('resumes');
   });
 });
