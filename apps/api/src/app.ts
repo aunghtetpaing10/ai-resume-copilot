@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import healthRoutes from './routes/health';
+import resumesRoutes from './routes/resumes';
 import authPlugin from './plugins/auth';
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -58,12 +59,20 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
+  // Multipart uploads (for PDF/DOCX resumes)
+  await app.register(import('@fastify/multipart'), {
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+  });
+
   // Auth plugin
   await app.register(authPlugin);
 
   // Routes
   app.register(async (api) => {
     api.register(healthRoutes, { prefix: '/health' });
+    api.register(resumesRoutes, { prefix: '/resumes' });
 
     // Protected auth testing route
     api.get('/auth/me', { preValidation: [app.authenticate] }, async (request, reply) => {

@@ -62,6 +62,22 @@ export interface Resume {
   updated_at: string;
 }
 
+export interface CreateResumeRequest {
+  title: string;
+  content?: Partial<ResumeContent>;
+}
+
+export interface UpdateResumeRequest {
+  title?: string;
+  content?: Partial<ResumeContent>;
+}
+
+export interface FileUploadResponse {
+  success: boolean;
+  resumeId?: string;
+  error?: string;
+}
+
 export interface JobDescription {
   id: string;
   user_id: string;

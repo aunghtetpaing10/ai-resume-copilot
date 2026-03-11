@@ -1,0 +1,4 @@
+src/services/__tests__/resume-parser.test.ts(15,75): error TS2345: Argument of type '{ text: string; }' is not assignable to parameter of type 'never'.
+src/services/__tests__/resume-parser.test.ts(43,75): error TS2345: Argument of type 'Error' is not assignable to parameter of type 'never'.
+src/services/resume-parser.ts(15,28): error TS2349: This expression is not callable.
+  Type 'typeof import("D:/Personal Projects/resume_builder/node_modules/pdf-parse/dist/pdf-parse/cjs/index")' has no call signatures.

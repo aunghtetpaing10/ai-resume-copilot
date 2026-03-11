@@ -16,11 +16,10 @@ export default function Dashboard() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Dashboard cards will go here */}
-          <div className="p-6 rounded-xl border bg-card text-card-foreground shadow">
-            <h3 className="font-semibold leading-none tracking-tight mb-2">Resumes</h3>
-            <p className="text-sm text-muted-foreground">You haven't created any resumes yet.</p>
-            <Button className="mt-4 w-full">Create Resume</Button>
+          <div className="p-6 rounded-xl border bg-card text-card-foreground shadow col-span-1 md:col-span-2 lg:col-span-3">
+            <h3 className="font-semibold leading-none tracking-tight mb-2">My Resumes</h3>
+            <p className="text-sm text-muted-foreground">Manage your resumes, upload documents, and edit them.</p>
+            <Button className="mt-4" onClick={() => window.location.href = '/resumes'}>Go to Resumes</Button>
           </div>
         </div>
       </div>

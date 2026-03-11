@@ -1,0 +1,22 @@
+FAIL apps/api/src/services/__tests__/resume-parser.test.ts
+  ● Test suite failed to run
+
+    File not found: tsconfig.json (resolved as: D:\Personal Projects\resume_builder\tsconfig.json)
+
+      at ConfigSet.resolvePath (../../node_modules/ts-jest/dist/legacy/config/config-set.js:616:19)
+      at ConfigSet._setupConfigSet (../../node_modules/ts-jest/dist/legacy/config/config-set.js:322:71)
+      at new ConfigSet (../../node_modules/ts-jest/dist/legacy/config/config-set.js:206:14)
+      at TsJestTransformer._createConfigSet (../../node_modules/ts-jest/dist/legacy/ts-jest-transformer.js:119:16)
+      at TsJestTransformer._configsFor (../../node_modules/ts-jest/dist/legacy/ts-jest-transformer.js:98:34)
+      at TsJestTransformer.getCacheKey (../../node_modules/ts-jest/dist/legacy/ts-jest-transformer.js:249:30)
+      at ScriptTransformer._getCacheKey (../../node_modules/@jest/transform/build/index.js:188:41)
+      at ScriptTransformer._getFileCachePath (../../node_modules/@jest/transform/build/index.js:224:27)
+      at ScriptTransformer.transformSource (../../node_modules/@jest/transform/build/index.js:395:32)
+      at ScriptTransformer._transformAndBuildScript (../../node_modules/@jest/transform/build/index.js:512:40)
+      at ScriptTransformer.transform (../../node_modules/@jest/transform/build/index.js:551:19)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.457 s
+Ran all test suites.

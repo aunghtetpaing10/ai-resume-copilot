@@ -3,6 +3,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Resumes from './pages/Resumes';
+import ResumeEditor from './pages/ResumeEditor';
 
 function App() {
   return (
@@ -15,7 +17,8 @@ function App() {
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            {/* Future routes: /resumes, /job-descriptions */}
+            <Route path="/resumes" element={<Resumes />} />
+            <Route path="/resumes/:id/edit" element={<ResumeEditor />} />
           </Route>
 
           {/* Fallback */}
