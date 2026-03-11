@@ -2,7 +2,6 @@ import request from 'supertest';
 import { buildApp } from '../../app';
 import { FastifyInstance } from 'fastify';
 import { supabase } from '../../lib/supabase';
-import { ResumeContent } from '@ai-resume-copilot/shared-types';
 
 // Mock Supabase to avoid hitting real database in tests
 jest.mock('../../lib/supabase', () => ({

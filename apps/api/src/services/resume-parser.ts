@@ -1,4 +1,4 @@
-const pdfParse = require('pdf-parse');
+import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 
 export class ResumeParserService {
@@ -12,8 +12,10 @@ export class ResumeParserService {
   static async extractText(buffer: Buffer, mimetype: string): Promise<string> {
     try {
       if (mimetype === 'application/pdf') {
-        const data = await pdfParse(buffer);
-        return data.text.trim();
+        const parser = new PDFParse({ data: buffer });
+        const result = await parser.getText();
+        await parser.destroy();
+        return result.text.trim();
       }
 
       if (

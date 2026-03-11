@@ -1,9 +1,19 @@
 import { ResumeParserService } from '../resume-parser';
-const pdfParse = require('pdf-parse');
+import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 
+const mockGetText = jest.fn();
+const mockDestroy = jest.fn();
+
 // Mock dependencies
-jest.mock('pdf-parse', () => jest.fn());
+jest.mock('pdf-parse', () => {
+  return {
+    PDFParse: jest.fn().mockImplementation(() => ({
+      getText: mockGetText,
+      destroy: mockDestroy
+    }))
+  };
+});
 jest.mock('mammoth');
 
 describe('ResumeParserService', () => {
@@ -12,12 +22,14 @@ describe('ResumeParserService', () => {
   });
 
   it('should parse PDF files correctly', async () => {
-    (pdfParse as jest.Mock).mockResolvedValue({ text: '  Mock PDF Content  ' });
+    mockGetText.mockResolvedValue({ text: '  Mock PDF Content  ' });
     
     const buffer = Buffer.from('mock pdf');
     const result = await ResumeParserService.extractText(buffer, 'application/pdf');
     
-    expect(pdfParse).toHaveBeenCalledWith(buffer);
+    expect(PDFParse).toHaveBeenCalledWith({ data: buffer });
+    expect(mockGetText).toHaveBeenCalled();
+    expect(mockDestroy).toHaveBeenCalled();
     expect(result).toBe('Mock PDF Content');
   });
 
@@ -40,7 +52,7 @@ describe('ResumeParserService', () => {
   });
 
   it('should wrap external parser errors', async () => {
-    (pdfParse as jest.Mock).mockRejectedValue(new Error('PDF corrupted'));
+    mockGetText.mockRejectedValue(new Error('PDF corrupted'));
     
     const buffer = Buffer.from('bad pdf');
     await expect(ResumeParserService.extractText(buffer, 'application/pdf'))
