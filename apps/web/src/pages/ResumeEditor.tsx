@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Wand2, Target, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function ResumeEditor() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +18,13 @@ export default function ResumeEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // AI state
+  const [jobDescription, setJobDescription] = useState('');
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [tailoring, setTailoring] = useState(false);
+  const [scoring, setScoring] = useState(false);
+  const [atsScore, setAtsScore] = useState<{ score: number; feedback: string[] } | null>(null);
 
   useEffect(() => {
     if (id) fetchResume(id);
@@ -55,11 +62,44 @@ export default function ResumeEditor() {
         title,
         content: parsedContent
       });
-      // Optionally show a success toast here
     } catch (err: any) {
       setError(err.message || 'Failed to save resume');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTailor = async () => {
+    if (!id || !jobDescription.trim()) {
+      setError('Please paste a job description first.');
+      return;
+    }
+    try {
+      setTailoring(true);
+      setError('');
+      const tailoredContent = await api.ai.tailor(id, jobDescription);
+      setJsonContent(JSON.stringify(tailoredContent, null, 2));
+    } catch (err: any) {
+      setError(err.message || 'AI tailoring failed');
+    } finally {
+      setTailoring(false);
+    }
+  };
+
+  const handleScore = async () => {
+    if (!id || !jobDescription.trim()) {
+      setError('Please paste a job description first.');
+      return;
+    }
+    try {
+      setScoring(true);
+      setError('');
+      const result = await api.ai.score(id, jobDescription);
+      setAtsScore(result);
+    } catch (err: any) {
+      setError(err.message || 'AI scoring failed');
+    } finally {
+      setScoring(false);
     }
   };
 
@@ -89,37 +129,132 @@ export default function ResumeEditor() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Metadata</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium leading-none mb-2 block">
-                Resume Title
-              </label>
-              <Input 
-                value={title} 
-                onChange={(e) => setTitle(e.target.value)} 
-                placeholder="e.g. Software Engineer 2024"
-              />
-            </div>
-            
-            {resume?.source_file_path && (
-              <div className="pt-4 border-t">
-                 <p className="text-sm text-muted-foreground mb-2">
-                   This resume was parsed from an uploaded document.
-                 </p>
-                 <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                    Source: {resume.source_file_path.split('/').pop()}
-                 </span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Metadata + AI Panel */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Metadata</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium leading-none mb-2 block">
+                  Resume Title
+                </label>
+                <Input 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  placeholder="e.g. Software Engineer 2024"
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              
+              {resume?.source_file_path && (
+                <div className="pt-4 border-t">
+                   <p className="text-sm text-muted-foreground mb-2">
+                     This resume was parsed from an uploaded document.
+                   </p>
+                   <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                      Source: {resume.source_file_path.split('/').pop()}
+                   </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card>
+          {/* AI Tools Panel */}
+          <Card>
+            <CardHeader className="cursor-pointer" onClick={() => setAiPanelOpen(!aiPanelOpen)}>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Wand2 className="h-5 w-5 text-purple-500" />
+                  AI Tools
+                </CardTitle>
+                {aiPanelOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </div>
+            </CardHeader>
+            {aiPanelOpen && (
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium leading-none mb-2 block">
+                    Job Description
+                  </label>
+                  <Textarea
+                    className="min-h-[200px] text-sm"
+                    placeholder="Paste the target job description here..."
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={handleTailor}
+                    disabled={tailoring || !jobDescription.trim()}
+                  >
+                    {tailoring ? (
+                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" /> Tailoring...</>
+                    ) : (
+                      <><Target className="h-4 w-4 mr-2" /> Tailor</>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleScore}
+                    disabled={scoring || !jobDescription.trim()}
+                  >
+                    {scoring ? (
+                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" /> Scoring...</>
+                    ) : (
+                      'ATS Score'
+                    )}
+                  </Button>
+                </div>
+
+                {/* ATS Score Result */}
+                {atsScore && (
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">ATS Score</span>
+                      <span className={`text-2xl font-bold ${
+                        atsScore.score >= 80 ? 'text-green-600' :
+                        atsScore.score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {atsScore.score}/100
+                      </span>
+                    </div>
+                    {/* Score progress bar */}
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${
+                          atsScore.score >= 80 ? 'bg-green-500' :
+                          atsScore.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${atsScore.score}%` }}
+                      />
+                    </div>
+                    {atsScore.feedback.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-2">Feedback</p>
+                        <ul className="text-sm text-muted-foreground space-y-1">
+                          {atsScore.feedback.map((item, i) => (
+                            <li key={i} className="flex gap-2">
+                              <span className="text-muted-foreground/50">•</span>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+        </div>
+
+        {/* Right Column: JSON Editor */}
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Structured Content (JSON)</CardTitle>
           </CardHeader>

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { CreateResumeRequest, UpdateResumeRequest, Resume } from '@ai-resume-copilot/shared-types';
+import { CreateResumeRequest, UpdateResumeRequest, Resume, ResumeContent } from '@ai-resume-copilot/shared-types';
 
 const API_BASE = '/api/v1';
 
@@ -80,6 +80,43 @@ export const api = {
       if (!res.ok) throw new Error('Failed to upload resume');
       const data = await res.json();
       return data.resume;
+    }
+  },
+
+  ai: {
+    async parse(rawText: string): Promise<ResumeContent> {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/ai/parse`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ rawText })
+      });
+      if (!res.ok) throw new Error('Failed to parse resume');
+      const data = await res.json();
+      return data.content;
+    },
+
+    async tailor(resumeId: string, jobDescription: string): Promise<ResumeContent> {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/ai/tailor`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ resumeId, jobDescription })
+      });
+      if (!res.ok) throw new Error('Failed to tailor resume');
+      const data = await res.json();
+      return data.content;
+    },
+
+    async score(resumeId: string, jobDescription: string): Promise<{ score: number; feedback: string[] }> {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/ai/score`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ resumeId, jobDescription })
+      });
+      if (!res.ok) throw new Error('Failed to score resume');
+      return res.json();
     }
   }
 };

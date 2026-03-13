@@ -6,6 +6,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import healthRoutes from './routes/health';
 import resumesRoutes from './routes/resumes';
+import aiRoutes from './routes/ai';
 import authPlugin from './plugins/auth';
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -73,6 +74,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   app.register(async (api) => {
     api.register(healthRoutes, { prefix: '/health' });
     api.register(resumesRoutes, { prefix: '/resumes' });
+    api.register(aiRoutes, { prefix: '/ai' });
 
     // Protected auth testing route
     api.get('/auth/me', { preValidation: [app.authenticate] }, async (request, _reply) => {
